@@ -11,7 +11,7 @@ void gemm_cpp(float *a, float *b, float *c, int M, int N, int K) {
 
             float sum = 0.0f;
             for (int k = 0; k < K; k++) {
-                sum += a[i * K + k] * b[ k * N + n];
+                sum += a[i * K + k] * b[ k * N + j];
             }
             c[i * N + j] = sum;
         }

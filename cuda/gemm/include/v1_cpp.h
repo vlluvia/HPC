@@ -5,9 +5,9 @@
 #ifndef HPC_V1_CPP_H
 #define HPC_V1_CPP_H
 
-
+void gemm_cpp(float *a, float *b, float *c, int M, int N, int K);
 class v1_cpp {
-
+//    public: void gemm_cpp(float *a, float *b, float *c, int M, int N, int K);
 };
 
 

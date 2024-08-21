@@ -16,11 +16,11 @@ void softmax_cpu(float *out, const float *inp, int N, int C) {
 
         double sum = 0.0;
         for(int j = 0; j < C; j++){
-            out[j] = expf(x[j] - max_val);
-            sum += out[j];
+            y[j] = expf(x[j] - max_val);
+            sum += y[j];
         }
         for(int j = 0; j < C; j++){
-            out[j] /= sum;
+            y[j] /= sum;
         }
     }
 }

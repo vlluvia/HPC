@@ -4,12 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <float.h>
-#include <cuda_runtime.h>
-#include "include/sgemm_v1.cuh"
-#include "v1_cpp.h"
+#include "cuda_runtime.h"
+#include <time.h>
 
 #define FLOAT4(pointer) (reinterpret_cast<float4*>(&(pointer))[0])
-
 using namespace std;
 
 float testError(
@@ -27,7 +25,7 @@ __global__ void sgemm_v1(float *a, float *b, float *c, int M, int N, int K) {
     const int BK = 8;
     const int TM = 8;
     const int TN = 8;
-
+    
     const int bx = blockIdx.x;
     const int by = blockIdx.y;
     const int tx = threadIdx.x;
@@ -39,20 +37,20 @@ __global__ void sgemm_v1(float *a, float *b, float *c, int M, int N, int K) {
 
     float r_c[TM][TN] = {0.0f};
 
-    int load_a_smem_m = bx >> 1;
-    int load_a_smem_k = (bx & 1) << 2;
-    int load_b_smem_k = by >> 5;
-    int load_b_smem_n = (by & 31) << 2;
+    int load_a_smem_m = tid >> 1;
+    int load_a_smem_k = (tid & 1) << 2;
+    int load_b_smem_k = tid >> 5;
+    int load_b_smem_n = (tid & 31) << 2;
 
     int load_a_gmem_m = by * BM + load_a_smem_m;
     int load_b_gmem_n = bx * BN + load_b_smem_n;
 
     for (int bk = 0; bk < (BK + K - 1) / BK; bk++) {
 
-        int load_a_gmem_k = bx * BK + load_a_smem_k;
+        int load_a_gmem_k = bk * BK + load_a_smem_k;
         int load_a_gmem_addr = load_a_gmem_m * K + load_a_gmem_k;
         s_a[load_a_smem_m][load_a_smem_k] = a[load_a_gmem_addr];
-        int load_b_gmem_k = bx * BK + load_b_smem_k;
+        int load_b_gmem_k = bk * BK + load_b_smem_k;
         int load_b_gmem_addr = load_b_gmem_k * N + load_b_gmem_n;
         s_b[load_b_smem_k][load_b_smem_n] = b[load_b_gmem_addr];
 
@@ -110,8 +108,8 @@ void main_c() {
         double total_sec = 0.0;
         for (int j = 0; j < outer_repeat; j++) {
             double this_sec = testPerformance(gpuSgemm, gridDim, blockDim, M, N, K, inner_repeat);
-            max_sec = max(max_sec, this_sec);
-            min_sec = min(min_sec, this_sec);
+            max_sec = fmax(max_sec, this_sec);
+            min_sec = fmin(min_sec, this_sec);
             total_sec += this_sec;
         }
         double avg_sec = total_sec / outer_repeat;
@@ -148,7 +146,7 @@ float testError(
         h_b[i] = rand() / float(RAND_MAX);
     cudaMemset(d_c, 15, size_c);
 
-    gemm_cpp(h_a, h_b, h_c, M, N, K);
+    //gemm_cpp(h_a, h_b, h_c, M, N, K);
 
     cudaMemcpy(d_a, h_a, size_a, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, size_b, cudaMemcpyHostToDevice);
@@ -160,7 +158,7 @@ float testError(
         if (max_error != max_error || this_error != this_error) // nan
             max_error = -NAN;
         else
-            max_error = max(max_error, this_error);
+            max_error = fmax(max_error, this_error);
     }
 
     cudaFree(d_a);
